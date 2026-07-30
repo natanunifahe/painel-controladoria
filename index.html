@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="UNIFAHE Analytics — Dashboard Comercial da Unidade Central">
+    <title>UNIFAHE Analytics | Unidade Central</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="cabecalho">
+        <div class="cabecalho-conteudo">
+            <div class="marca">
+                <img src="logo-unifahe-completa.png" alt="UNIFAHE" class="logo-unifahe-completa">
+            </div>
+
+            <div class="cabecalho-titulo">
+                <span class="cabecalho-subtitulo">UNIFAHE ANALYTICS</span>
+                <h1>Dashboard <span>Comercial</span></h1>
+                <p>Unidade Central • Acompanhamento semanal de matrículas</p>
+            </div>
+
+            <div class="cabecalho-acoes">
+                <div class="status-atualizacao">
+                    <span class="status-indicador"></span>
+                    <div>
+                        <small>Última atualização</small>
+                        <strong id="ultimaAtualizacao">Aguardando dados</strong>
+                    </div>
+                </div>
+
+                <button type="button" id="btnAtualizar" class="botao-atualizar">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    Atualizar
+                </button>
+            </div>
+        </div>
+
+        <div class="cabecalho-detalhe cabecalho-detalhe-azul"></div>
+        <div class="cabecalho-detalhe cabecalho-detalhe-laranja"></div>
+    </header>
+
+    <main class="painel">
+        <section class="faixa-periodo">
+            <div class="periodo-icone"><i class="bi bi-calendar-week"></i></div>
+            <div>
+                <small>SEMANA ANALISADA</small>
+                <strong id="periodoAnalisado">—</strong>
+                <span>Segunda-feira a domingo</span>
+            </div>
+            <div class="unidade-identificacao">
+                <small>UNIDADE</small>
+                <strong>Central</strong>
+            </div>
+        </section>
+
+        <section class="indicadores-grid">
+            <article class="card-indicador card-destaque">
+                <div class="card-indicador-topo">
+                    <div class="card-icone"><i class="bi bi-clipboard2-check"></i></div>
+                    <span class="card-etiqueta">SEMANA</span>
+                </div>
+                <div class="card-indicador-conteudo">
+                    <span>Total de matrículas</span>
+                    <strong id="totalMatriculas">0</strong>
+                    <p>Registros da semana atual</p>
+                </div>
+            </article>
+
+            <article class="card-indicador">
+                <div class="card-indicador-topo">
+                    <div class="card-icone"><i class="bi bi-calendar2-check"></i></div>
+                    <span class="card-etiqueta">HOJE</span>
+                </div>
+                <div class="card-indicador-conteudo">
+                    <span>Matrículas do dia</span>
+                    <strong id="matriculasHoje">0</strong>
+                    <p>Matrículas realizadas hoje</p>
+                </div>
+            </article>
+
+            <article class="card-indicador">
+                <div class="card-indicador-topo">
+                    <div class="card-icone"><i class="bi bi-people"></i></div>
+                    <span class="card-etiqueta">EQUIPE</span>
+                </div>
+                <div class="card-indicador-conteudo">
+                    <span>Vendedores ativos</span>
+                    <strong id="totalVendedores">0</strong>
+                    <p>Consultores com matrículas na semana</p>
+                </div>
+            </article>
+
+            <article class="card-indicador">
+                <div class="card-indicador-topo">
+                    <div class="card-icone"><i class="bi bi-speedometer2"></i></div>
+                    <span class="card-etiqueta">MÉDIA</span>
+                </div>
+                <div class="card-indicador-conteudo">
+                    <span>Média diária</span>
+                    <strong id="mediaDiaria">0</strong>
+                    <p>Média nos dias com registros</p>
+                </div>
+            </article>
+        </section>
+
+        <section class="grade-principal">
+            <article class="card-grafico card-ranking">
+                <div class="card-cabecalho">
+                    <div>
+                        <span class="card-cabecalho-subtitulo">DESEMPENHO DA SEMANA</span>
+                        <h2>Ranking de vendedores</h2>
+                        <p>Quantidade de matrículas por vendedor</p>
+                    </div>
+                    <div class="card-cabecalho-icone"><i class="bi bi-bar-chart-line"></i></div>
+                </div>
+                <div class="grafico-container grafico-ranking-container">
+                    <canvas id="graficoVendedores"></canvas>
+                </div>
+            </article>
+
+            <aside class="destaques-grid">
+                <article class="card-destaque-lateral">
+                    <div class="destaque-icone"><i class="bi bi-trophy"></i></div>
+                    <div class="destaque-conteudo">
+                        <span>Vendedor da semana</span>
+                        <strong id="melhorVendedor">—</strong>
+                        <small id="melhorVendedorQuantidade">0 matrículas</small>
+                    </div>
+                </article>
+
+                <article class="card-destaque-lateral">
+                    <div class="destaque-icone"><i class="bi bi-mortarboard"></i></div>
+                    <div class="destaque-conteudo">
+                        <span>Curso destaque</span>
+                        <strong id="cursoDestaque">—</strong>
+                        <small id="cursoDestaqueQuantidade">0 matrículas</small>
+                    </div>
+                </article>
+
+                <article class="card-destaque-lateral">
+                    <div class="destaque-icone"><i class="bi bi-graph-up-arrow"></i></div>
+                    <div class="destaque-conteudo">
+                        <span>Variação semanal</span>
+                        <strong id="variacaoSemanal">—</strong>
+                        <small id="variacaoSemanalDetalhe">Comparação com a semana anterior</small>
+                    </div>
+                </article>
+            </aside>
+        </section>
+
+        <section class="graficos-secundarios">
+            <article class="card-grafico grafico-evolucao">
+                <div class="card-cabecalho">
+                    <div>
+                        <span class="card-cabecalho-subtitulo">EVOLUÇÃO</span>
+                        <h2>Matrículas por dia</h2>
+                        <p>Distribuição de segunda-feira a domingo</p>
+                    </div>
+                    <div class="card-cabecalho-icone"><i class="bi bi-graph-up"></i></div>
+                </div>
+                <div class="grafico-container"><canvas id="graficoEvolucao"></canvas></div>
+            </article>
+
+            <article class="card-grafico">
+                <div class="card-cabecalho">
+                    <div>
+                        <span class="card-cabecalho-subtitulo">DISTRIBUIÇÃO</span>
+                        <h2>Matrículas por curso</h2>
+                        <p>Participação dos principais cursos da semana</p>
+                    </div>
+                    <div class="card-cabecalho-icone"><i class="bi bi-pie-chart"></i></div>
+                </div>
+                <div class="grafico-container"><canvas id="graficoCursos"></canvas></div>
+            </article>
+        </section>
+
+        <div id="mensagemStatus" class="mensagem-status" aria-live="polite">
+            <i class="bi bi-info-circle"></i>
+            <span id="textoMensagemStatus"></span>
+        </div>
+    </main>
+
+    <footer class="rodape">
+        <div>
+            <strong>UNIFAHE Analytics • Unidade Central</strong>
+            <span>Dashboard comercial de acompanhamento semanal</span>
+        </div>
+        <p>Desenvolvido por Natan Santos</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="api.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
