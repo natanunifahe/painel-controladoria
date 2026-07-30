@@ -1,13 +1,13 @@
 /* ==========================================================
-   DASHBOARD COMERCIAL UNIFAHE
-   Unidade Central
+   DASHBOARD COMERCIAL UNIFAHE — UNIDADE CENTRAL
 ========================================================== */
 
 const CONFIG = {
-    unidade: "Unidade Central",
+    unidade: "UNIDADE CENTRAL",
     campos: {
         data: "1",
         vendedor: "3",
+        polo: "4",
         curso: "12",
         boleto: "16",
         cartaoAvista: "17",
@@ -17,1151 +17,330 @@ const CONFIG = {
 
 let dadosOriginais = [];
 let dadosFiltrados = [];
-
 let graficoRanking = null;
 let graficoEvolucao = null;
 let graficoCursos = null;
-
-/* ==========================================================
-   ELEMENTOS DO HTML
-========================================================== */
 
 const elementos = {
     totalMatriculas: document.getElementById("totalMatriculas"),
     matriculasHoje: document.getElementById("matriculasHoje"),
     vendedoresAtivos: document.getElementById("totalVendedores"),
     mediaDiaria: document.getElementById("mediaDiaria"),
-
     melhorVendedor: document.getElementById("melhorVendedor"),
     melhorVendedorQuantidade: document.getElementById("melhorVendedorQuantidade"),
-
     cursoDestaque: document.getElementById("cursoDestaque"),
     cursoDestaqueQuantidade: document.getElementById("cursoDestaqueQuantidade"),
-
     periodoExibicao: document.getElementById("periodoAnalisado"),
     comparativoSemana: document.getElementById("variacaoSemanal"),
     comparativoDescricao: document.getElementById("variacaoSemanalDetalhe"),
-
     ultimaAtualizacao: document.getElementById("ultimaAtualizacao"),
     btnAtualizar: document.getElementById("btnAtualizar"),
-
     mensagemStatus: document.getElementById("mensagemStatus"),
     textoMensagemStatus: document.getElementById("textoMensagemStatus"),
-
     faturamentoBoleto: document.getElementById("faturamentoBoleto"),
     quantidadeBoleto: document.getElementById("quantidadeBoleto"),
     faturamentoCartao: document.getElementById("faturamentoCartao"),
     quantidadeCartao: document.getElementById("quantidadeCartao"),
     faturamentoTaxa: document.getElementById("faturamentoTaxa"),
-    quantidadeTaxa: document.getElementById("quantidadeTaxa")
+    quantidadeTaxa: document.getElementById("quantidadeTaxa"),
+    filtroDataInicio: document.getElementById("filtroDataInicio"),
+    filtroDataFim: document.getElementById("filtroDataFim"),
+    filtroPolo: document.getElementById("filtroPolo"),
+    filtroConsultor: document.getElementById("filtroConsultor"),
+    btnLimparFiltros: document.getElementById("btnLimparFiltros")
 };
 
-/* ==========================================================
-   UTILITÁRIOS
-========================================================== */
-
 function limparTexto(valor) {
-    if (valor === null || valor === undefined) {
-        return "";
-    }
+    return valor === null || valor === undefined ? "" : String(valor).trim();
+}
 
-    return String(valor).trim();
+function criarDataLocal(ano, mes, dia) {
+    const data = new Date(Number(ano), Number(mes) - 1, Number(dia));
+    if (Number.isNaN(data.getTime())) return null;
+    if (data.getFullYear() !== Number(ano) || data.getMonth() !== Number(mes) - 1 || data.getDate() !== Number(dia)) return null;
+    data.setHours(0, 0, 0, 0);
+    return data;
 }
 
 function converterData(valor) {
-    if (valor === null || valor === undefined || valor === "") {
-        return null;
+    if (valor === null || valor === undefined || valor === "") return null;
+    if (valor instanceof Date && !Number.isNaN(valor.getTime())) {
+        return criarDataLocal(valor.getFullYear(), valor.getMonth() + 1, valor.getDate());
     }
 
     const texto = String(valor).trim();
+    const brasileiro = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (brasileiro) return criarDataLocal(brasileiro[3], brasileiro[2], brasileiro[1]);
 
-    if (texto.toUpperCase().includes("DATA") || texto === "-") {
-        return null;
-    }
+    const iso = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (iso) return criarDataLocal(iso[1], iso[2], iso[3]);
 
-    function criarDataLocal(ano, mes, dia) {
-        const data = new Date(
-            Number(ano),
-            Number(mes) - 1,
-            Number(dia),
-            12,
-            0,
-            0,
-            0
-        );
-
-        if (
-            Number.isNaN(data.getTime()) ||
-            data.getFullYear() !== Number(ano) ||
-            data.getMonth() !== Number(mes) - 1 ||
-            data.getDate() !== Number(dia)
-        ) {
-            return null;
-        }
-
-        return data;
-    }
-
-    const formatoIso = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-
-    if (formatoIso) {
-        return criarDataLocal(formatoIso[1], formatoIso[2], formatoIso[3]);
-    }
-
-    const formatoBarras = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-
-    if (formatoBarras) {
-        const primeiraParte = Number(formatoBarras[1]);
-        const segundaParte = Number(formatoBarras[2]);
-        const ano = Number(formatoBarras[3]);
-
-        let dia;
-        let mes;
-
-        if (segundaParte > 12) {
-            mes = primeiraParte;
-            dia = segundaParte;
-        } else if (primeiraParte > 12) {
-            dia = primeiraParte;
-            mes = segundaParte;
-        } else {
-            mes = primeiraParte;
-            dia = segundaParte;
-        }
-
-        return criarDataLocal(ano, mes, dia);
-    }
-
-    const serial = Number(texto);
-
+    const serial = Number(texto.replace(",", "."));
     if (Number.isFinite(serial) && serial >= 20000 && serial <= 80000) {
-        const dataUTC = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
-
-        return criarDataLocal(
-            dataUTC.getUTCFullYear(),
-            dataUTC.getUTCMonth() + 1,
-            dataUTC.getUTCDate()
-        );
+        const dataUTC = new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 86400000);
+        return criarDataLocal(dataUTC.getUTCFullYear(), dataUTC.getUTCMonth() + 1, dataUTC.getUTCDate());
     }
-
     return null;
 }
 
 function converterValorMonetario(valor) {
-    if (valor === null || valor === undefined || valor === "") {
-        return 0;
-    }
-
-    if (typeof valor === "number") {
-        return Number.isFinite(valor) ? valor : 0;
-    }
-
-    let texto = String(valor)
-        .trim()
-        .replace(/\s/g, "")
-        .replace(/R\$/gi, "");
-
-    if (!texto) {
-        return 0;
-    }
-
-    if (texto.includes(".") && texto.includes(",")) {
-        texto = texto.replace(/\./g, "").replace(",", ".");
-    } else if (texto.includes(",")) {
-        texto = texto.replace(",", ".");
-    }
-
+    if (valor === null || valor === undefined || valor === "") return 0;
+    if (typeof valor === "number") return Number.isFinite(valor) ? valor : 0;
+    let texto = String(valor).trim().replace(/\s/g, "").replace(/R\$/gi, "");
+    if (!texto) return 0;
+    if (texto.includes(".") && texto.includes(",")) texto = texto.replace(/\./g, "").replace(",", ".");
+    else if (texto.includes(",")) texto = texto.replace(",", ".");
     const numero = Number(texto);
     return Number.isFinite(numero) ? numero : 0;
 }
 
-function inicioSemana(data) {
-    const copia = new Date(data);
-    const dia = copia.getDay();
-    const diferenca = dia === 0 ? -6 : 1 - dia;
-
-    copia.setDate(copia.getDate() + diferenca);
-    copia.setHours(0, 0, 0, 0);
-
-    return copia;
+function obterChaveData(data) {
+    if (!(data instanceof Date) || Number.isNaN(data.getTime())) return "";
+    return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`;
 }
 
-function fimSemana(data) {
-    const fim = inicioSemana(data);
-
-    fim.setDate(fim.getDate() + 6);
-    fim.setHours(23, 59, 59, 999);
-
-    return fim;
-}
-
-function obterPeriodoSelecionado() {
-    const hoje = new Date();
-    hoje.setHours(23, 59, 59, 999);
-
-    const datasDisponiveis = dadosOriginais
-        .map((registro) => registro.data)
-        .filter((data) =>
-            data instanceof Date &&
-            !Number.isNaN(data.getTime()) &&
-            data <= hoje
-        )
-        .sort((dataA, dataB) => dataB - dataA);
-
-    const dataReferencia = datasDisponiveis.length > 0
-        ? datasDisponiveis[0]
-        : hoje;
-
-    return {
-        inicio: inicioSemana(dataReferencia),
-        fim: fimSemana(dataReferencia)
-    };
-}
-
-function obterSemanaAnterior() {
-    const periodoAtual = obterPeriodoSelecionado();
-
-    const inicio = new Date(periodoAtual.inicio);
-    const fim = new Date(periodoAtual.fim);
-
-    inicio.setDate(inicio.getDate() - 7);
-    fim.setDate(fim.getDate() - 7);
-
-    return { inicio, fim };
+function dataDoInput(valor, fimDoDia = false) {
+    const data = converterData(valor);
+    if (data && fimDoDia) data.setHours(23, 59, 59, 999);
+    return data;
 }
 
 function formatarDataBrasileira(data) {
-    if (!data || Number.isNaN(data.getTime())) {
-        return "—";
-    }
-
-    return data.toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric"
-    });
+    return data && !Number.isNaN(data.getTime()) ? data.toLocaleDateString("pt-BR") : "—";
 }
 
 function formatarDataCurta(data) {
-    if (!data || Number.isNaN(data.getTime())) {
-        return "—";
-    }
-
-    return data.toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit"
-    });
+    return data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-function formatarNumero(valor) {
-    return Number(valor || 0).toLocaleString("pt-BR");
-}
+function formatarNumero(valor) { return Number(valor || 0).toLocaleString("pt-BR"); }
+function formatarMoeda(valor) { return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+function formatarQuantidadeMatriculas(qtd) { return `${qtd} ${qtd === 1 ? "matrícula" : "matrículas"}`; }
 
-function formatarQuantidadeMatriculas(quantidade) {
-    return `${quantidade} ${quantidade === 1 ? "matrícula" : "matrículas"}`;
-}
-
-function datasSaoIguais(dataA, dataB) {
-    if (!dataA || !dataB) {
-        return false;
-    }
-
-    return (
-        dataA.getFullYear() === dataB.getFullYear() &&
-        dataA.getMonth() === dataB.getMonth() &&
-        dataA.getDate() === dataB.getDate()
-    );
-}
-
-function registroEstaNoPeriodo(registro, inicio, fim) {
-    return Boolean(
-        registro.data &&
-        registro.data >= inicio &&
-        registro.data <= fim
-    );
-}
+function datasSaoIguais(a, b) { return a && b && obterChaveData(a) === obterChaveData(b); }
+function registroEstaNoPeriodo(registro, inicio, fim) { return Boolean(registro.data && registro.data >= inicio && registro.data <= fim); }
 
 function contarOcorrencias(dados, campo) {
-    return dados.reduce((resultado, registro) => {
+    return dados.reduce((acc, registro) => {
         const valor = limparTexto(registro[campo]);
-
-        if (valor) {
-            resultado[valor] = (resultado[valor] || 0) + 1;
-        }
-
-        return resultado;
+        if (valor) acc[valor] = (acc[valor] || 0) + 1;
+        return acc;
     }, {});
 }
-
-function contarValoresUnicos(dados, campo) {
-    return new Set(
-        dados
-            .map((registro) => limparTexto(registro[campo]))
-            .filter(Boolean)
-    ).size;
-}
-
+function contarValoresUnicos(dados, campo) { return new Set(dados.map(r => limparTexto(r[campo])).filter(Boolean)).size; }
 function obterMaiorOcorrencia(dados, campo) {
-    const ranking = Object.entries(contarOcorrencias(dados, campo))
-        .sort((itemA, itemB) => itemB[1] - itemA[1]);
-
-    if (ranking.length === 0) {
-        return {
-            nome: "—",
-            quantidade: 0
-        };
-    }
-
-    return {
-        nome: ranking[0][0],
-        quantidade: ranking[0][1]
-    };
+    const ranking = Object.entries(contarOcorrencias(dados, campo)).sort((a, b) => b[1] - a[1]);
+    return ranking.length ? { nome: ranking[0][0], quantidade: ranking[0][1] } : { nome: "—", quantidade: 0 };
 }
-
-/* ==========================================================
-   MENSAGENS E CARREGAMENTO
-========================================================== */
 
 function exibirMensagem(texto, tipo = "normal") {
-    if (!elementos.mensagemStatus || !elementos.textoMensagemStatus) {
-        return;
-    }
-
+    if (!elementos.mensagemStatus || !elementos.textoMensagemStatus) return;
     elementos.textoMensagemStatus.textContent = texto;
     elementos.mensagemStatus.classList.remove("erro", "sucesso");
-
-    if (tipo === "erro" || tipo === "sucesso") {
-        elementos.mensagemStatus.classList.add(tipo);
-    }
-
+    if (["erro", "sucesso"].includes(tipo)) elementos.mensagemStatus.classList.add(tipo);
     elementos.mensagemStatus.classList.add("visivel");
 }
 
-function definirEstadoCarregamento(estaCarregando) {
-    if (!elementos.btnAtualizar) {
-        return;
-    }
-
+function definirEstadoCarregamento(estado) {
+    if (!elementos.btnAtualizar) return;
+    elementos.btnAtualizar.disabled = estado;
     const icone = elementos.btnAtualizar.querySelector("i");
-
-    elementos.btnAtualizar.disabled = estaCarregando;
-    elementos.btnAtualizar.classList.toggle("carregando", estaCarregando);
-
-    if (estaCarregando) {
-        elementos.btnAtualizar.setAttribute("aria-busy", "true");
-    } else {
-        elementos.btnAtualizar.removeAttribute("aria-busy");
-    }
-
-    if (icone) {
-        icone.classList.toggle("icone-girando", estaCarregando);
-    }
+    if (icone) icone.classList.toggle("icone-girando", estado);
 }
 
 function atualizarHorario() {
-    if (!elementos.ultimaAtualizacao) {
-        return;
-    }
-
-    elementos.ultimaAtualizacao.textContent = new Date().toLocaleString(
-        "pt-BR",
-        {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
-        }
-    );
+    if (elementos.ultimaAtualizacao) elementos.ultimaAtualizacao.textContent = new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
-/* ==========================================================
-   CARREGAMENTO DA API
-========================================================== */
+function preencherSelect(select, valores, textoTodos) {
+    if (!select) return;
+    const selecionado = select.value;
+    select.innerHTML = `<option value="">${textoTodos}</option>`;
+    [...new Set(valores.filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR")).forEach(valor => {
+        const option = document.createElement("option");
+        option.value = valor;
+        option.textContent = valor;
+        select.appendChild(option);
+    });
+    if ([...select.options].some(op => op.value === selecionado)) select.value = selecionado;
+}
+
+function configurarFiltrosIniciais() {
+    if (!dadosOriginais.length) return;
+    const datas = dadosOriginais.map(r => r.data).filter(Boolean).sort((a, b) => a - b);
+    const min = datas[0];
+    const max = datas[datas.length - 1];
+    if (elementos.filtroDataInicio && !elementos.filtroDataInicio.value) elementos.filtroDataInicio.value = obterChaveData(min);
+    if (elementos.filtroDataFim && !elementos.filtroDataFim.value) elementos.filtroDataFim.value = obterChaveData(max);
+    preencherSelect(elementos.filtroPolo, dadosOriginais.map(r => r.polo), "Todos os polos");
+    preencherSelect(elementos.filtroConsultor, dadosOriginais.map(r => r.vendedor), "Todos os consultores");
+}
+
+function obterPeriodoSelecionado() {
+    const datas = dadosOriginais.map(r => r.data).filter(Boolean).sort((a, b) => a - b);
+    const inicioPadrao = datas[0] || new Date();
+    const fimPadrao = datas[datas.length - 1] || new Date();
+    const inicio = dataDoInput(elementos.filtroDataInicio?.value) || new Date(inicioPadrao);
+    const fim = dataDoInput(elementos.filtroDataFim?.value, true) || new Date(fimPadrao);
+    fim.setHours(23, 59, 59, 999);
+    return inicio <= fim ? { inicio, fim } : { inicio: dataDoInput(elementos.filtroDataFim.value), fim: dataDoInput(elementos.filtroDataInicio.value, true) };
+}
 
 async function carregarDados() {
-    try {
-        if (typeof API_URL === "undefined") {
-            throw new Error("A constante API_URL não foi encontrada no api.js.");
-        }
+    if (typeof API_URL === "undefined") throw new Error("A constante API_URL não foi encontrada no api.js.");
+    const resposta = await fetch(API_URL, { method: "GET", cache: "no-store" });
+    if (!resposta.ok) throw new Error(`Erro HTTP ${resposta.status}`);
+    const json = await resposta.json();
+    if (!Array.isArray(json)) throw new Error("A API não retornou uma lista válida.");
 
-        const resposta = await fetch(API_URL, {
-            method: "GET",
-            cache: "no-store"
-        });
+    dadosOriginais = json.map(registro => ({
+        data: converterData(registro[CONFIG.campos.data]),
+        vendedor: limparTexto(registro[CONFIG.campos.vendedor]),
+        polo: limparTexto(registro[CONFIG.campos.polo]),
+        curso: limparTexto(registro[CONFIG.campos.curso]),
+        boleto: converterValorMonetario(registro[CONFIG.campos.boleto]),
+        cartaoAvista: converterValorMonetario(registro[CONFIG.campos.cartaoAvista]),
+        taxaMatricula: converterValorMonetario(registro[CONFIG.campos.taxaMatricula])
+    })).filter(registro => registro.data && !registro.vendedor.toUpperCase().includes("VENDEDOR") && !registro.curso.toUpperCase().includes("CURSO"));
 
-        if (!resposta.ok) {
-            throw new Error(`Erro HTTP ${resposta.status}`);
-        }
-
-        const json = await resposta.json();
-
-        if (!Array.isArray(json)) {
-            throw new Error("A API não retornou uma lista válida.");
-        }
-
-        dadosOriginais = json
-            .map((registro) => ({
-                data: converterData(registro[CONFIG.campos.data]),
-                vendedor: limparTexto(registro[CONFIG.campos.vendedor]),
-                curso: limparTexto(registro[CONFIG.campos.curso]),
-                boleto: converterValorMonetario(registro[CONFIG.campos.boleto]),
-                cartaoAvista: converterValorMonetario(
-                    registro[CONFIG.campos.cartaoAvista]
-                ),
-                taxaMatricula: converterValorMonetario(
-                    registro[CONFIG.campos.taxaMatricula]
-                )
-            }))
-            .filter((registro) => {
-                const possuiDataValida =
-                    registro.data instanceof Date &&
-                    !Number.isNaN(registro.data.getTime());
-
-                const pareceCabecalho =
-                    registro.vendedor.toUpperCase().includes("VENDEDOR") ||
-                    registro.curso.toUpperCase().includes("CURSO");
-
-                return possuiDataValida && !pareceCabecalho;
-            });
-
-        aplicarFiltros();
-        atualizarHorario();
-
-        console.log("Dados carregados:", dadosOriginais);
-    } catch (erro) {
-        console.error("Erro ao carregar dados:", erro);
-
-        exibirMensagem(
-            "Não foi possível carregar os dados. Verifique a conexão com a API.",
-            "erro"
-        );
-    }
+    configurarFiltrosIniciais();
+    aplicarFiltros();
+    atualizarHorario();
 }
 
-/* ==========================================================
-   INDICADORES
-========================================================== */
-
-function animarNumero(elemento, valorFinal, casasDecimais = 0) {
-    if (!elemento) {
-        return;
-    }
-
-    const valorNumerico = Number(valorFinal) || 0;
-    const duracao = 600;
-    const inicio = performance.now();
-
-    function executar(tempoAtual) {
-        const progresso = Math.min((tempoAtual - inicio) / duracao, 1);
-        const valorAtual = valorNumerico * progresso;
-
-        elemento.textContent = valorAtual.toLocaleString("pt-BR", {
-            minimumFractionDigits: casasDecimais,
-            maximumFractionDigits: casasDecimais
-        });
-
-        if (progresso < 1) {
-            requestAnimationFrame(executar);
-        }
-    }
-
-    requestAnimationFrame(executar);
+function animarNumero(elemento, valorFinal, casas = 0) {
+    if (!elemento) return;
+    elemento.textContent = Number(valorFinal || 0).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
 }
 
-function contarMatriculasHoje(dados) {
-    const hoje = new Date();
-
-    return dados.filter((registro) =>
-        datasSaoIguais(registro.data, hoje)
-    ).length;
+function contarMatriculasHoje(dados) { const hoje = new Date(); return dados.filter(r => datasSaoIguais(r.data, hoje)).length; }
+function calcularMediaDiaria(dados) {
+    const diasComRegistro = new Set(dados.map(r => obterChaveData(r.data)).filter(Boolean)).size;
+    return diasComRegistro ? dados.length / diasComRegistro : 0;
 }
 
-function obterDiasDecorridosSemana(periodo) {
-    const hoje = new Date();
-    hoje.setHours(23, 59, 59, 999);
-
-    if (hoje < periodo.inicio) {
-        return 0;
-    }
-
-    const dataFinal = hoje < periodo.fim
-        ? hoje
-        : new Date(periodo.fim);
-
-    const milissegundosDia = 1000 * 60 * 60 * 24;
-    const diferenca = dataFinal.getTime() - periodo.inicio.getTime();
-
-    return Math.floor(diferenca / milissegundosDia) + 1;
-}
-
-function calcularMediaDiaria(dados, periodo) {
-    const diasDecorridos = obterDiasDecorridosSemana(periodo);
-
-    return diasDecorridos > 0
-        ? dados.length / diasDecorridos
-        : 0;
-}
-
-function atualizarIndicadores(dados, periodo) {
+function atualizarIndicadores(dados) {
     animarNumero(elementos.totalMatriculas, dados.length);
     animarNumero(elementos.matriculasHoje, contarMatriculasHoje(dados));
-    animarNumero(
-        elementos.vendedoresAtivos,
-        contarValoresUnicos(dados, "vendedor")
-    );
-    animarNumero(
-        elementos.mediaDiaria,
-        calcularMediaDiaria(dados, periodo),
-        1
-    );
+    animarNumero(elementos.vendedoresAtivos, contarValoresUnicos(dados, "vendedor"));
+    animarNumero(elementos.mediaDiaria, calcularMediaDiaria(dados), 1);
 }
-
-function atualizarDestaque(elementoNome, elementoQuantidade, resultado) {
-    if (elementoNome) {
-        elementoNome.textContent = resultado.nome;
-        elementoNome.title = resultado.nome;
-    }
-
-    if (elementoQuantidade) {
-        elementoQuantidade.textContent =
-            formatarQuantidadeMatriculas(resultado.quantidade);
-    }
+function atualizarDestaque(nomeEl, qtdEl, resultado) {
+    if (nomeEl) { nomeEl.textContent = resultado.nome; nomeEl.title = resultado.nome; }
+    if (qtdEl) qtdEl.textContent = formatarQuantidadeMatriculas(resultado.quantidade);
 }
-
 function atualizarDestaques(dados) {
-    atualizarDestaque(
-        elementos.melhorVendedor,
-        elementos.melhorVendedorQuantidade,
-        obterMaiorOcorrencia(dados, "vendedor")
-    );
-
-    atualizarDestaque(
-        elementos.cursoDestaque,
-        elementos.cursoDestaqueQuantidade,
-        obterMaiorOcorrencia(dados, "curso")
-    );
+    atualizarDestaque(elementos.melhorVendedor, elementos.melhorVendedorQuantidade, obterMaiorOcorrencia(dados, "vendedor"));
+    atualizarDestaque(elementos.cursoDestaque, elementos.cursoDestaqueQuantidade, obterMaiorOcorrencia(dados, "curso"));
 }
-
 function atualizarPeriodoExibido(periodo) {
-    if (!elementos.periodoExibicao) {
-        return;
-    }
-
-    elementos.periodoExibicao.textContent =
-        `${formatarDataBrasileira(periodo.inicio)} a ` +
-        `${formatarDataBrasileira(periodo.fim)}`;
+    if (elementos.periodoExibicao) elementos.periodoExibicao.textContent = `${formatarDataBrasileira(periodo.inicio)} a ${formatarDataBrasileira(periodo.fim)}`;
 }
 
-/* ==========================================================
-   COMPARAÇÃO SEMANAL
-========================================================== */
-
-function obterDadosSemanaAnterior() {
-    const periodo = obterSemanaAnterior();
-
-    return dadosOriginais.filter((registro) =>
-        registroEstaNoPeriodo(registro, periodo.inicio, periodo.fim)
-    );
-}
-
-function calcularVariacaoPercentual(atual, anterior) {
-    if (atual === 0 && anterior === 0) {
-        return 0;
+function atualizarComparativoPeriodo(periodo) {
+    const duracao = Math.round((periodo.fim - periodo.inicio) / 86400000) + 1;
+    const fimAnterior = new Date(periodo.inicio); fimAnterior.setDate(fimAnterior.getDate() - 1); fimAnterior.setHours(23,59,59,999);
+    const inicioAnterior = new Date(fimAnterior); inicioAnterior.setDate(inicioAnterior.getDate() - duracao + 1); inicioAnterior.setHours(0,0,0,0);
+    const polo = elementos.filtroPolo?.value || "";
+    const vendedor = elementos.filtroConsultor?.value || "";
+    const anterior = dadosOriginais.filter(r => registroEstaNoPeriodo(r, inicioAnterior, fimAnterior) && (!polo || r.polo === polo) && (!vendedor || r.vendedor === vendedor)).length;
+    const atual = dadosFiltrados.length;
+    const variacao = anterior === 0 ? (atual > 0 ? 100 : 0) : ((atual - anterior) / anterior) * 100;
+    if (elementos.comparativoSemana) {
+        elementos.comparativoSemana.textContent = `${variacao > 0 ? "+" : ""}${variacao.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+        elementos.comparativoSemana.className = variacao > 0 ? "positivo" : variacao < 0 ? "negativo" : "neutro";
     }
-
-    if (anterior === 0) {
-        return atual > 0 ? 100 : 0;
-    }
-
-    return ((atual - anterior) / anterior) * 100;
-}
-
-function atualizarComparativoSemana() {
-    if (!elementos.comparativoSemana) {
-        return;
-    }
-
-    const totalAtual = dadosFiltrados.length;
-    const totalAnterior = obterDadosSemanaAnterior().length;
-    const variacao = calcularVariacaoPercentual(totalAtual, totalAnterior);
-    const sinal = variacao > 0 ? "+" : "";
-
-    elementos.comparativoSemana.textContent =
-        `${sinal}${variacao.toLocaleString("pt-BR", {
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1
-        })}%`;
-
-    elementos.comparativoSemana.classList.remove(
-        "positivo",
-        "negativo",
-        "neutro"
-    );
-
-    elementos.comparativoSemana.classList.add(
-        variacao > 0
-            ? "positivo"
-            : variacao < 0
-                ? "negativo"
-                : "neutro"
-    );
-
-    if (elementos.comparativoDescricao) {
-        elementos.comparativoDescricao.textContent =
-            `${formatarNumero(totalAtual)} nesta semana • ` +
-            `${formatarNumero(totalAnterior)} na semana anterior`;
-    }
-}
-
-/* ==========================================================
-   CONTROLE DOS GRÁFICOS
-========================================================== */
-
-function chartDisponivel() {
-    if (typeof Chart === "undefined") {
-        console.error("A biblioteca Chart.js não foi encontrada.");
-        return false;
-    }
-
-    return true;
-}
-
-function destruirGrafico(grafico) {
-    if (grafico && typeof grafico.destroy === "function") {
-        grafico.destroy();
-    }
-}
-
-function obterCoresGrafico() {
-    return {
-        principal: "#1f82ff",
-        texto: "#ffffff",
-        grade: "rgba(255, 255, 255, 0.16)"
-    };
-}
-
-function obterPaletaCategorias() {
-    return [
-        "#1f82ff",
-        "#26d995",
-        "#ff7400",
-        "#8b5cf6",
-        "#ff5f68",
-        "#00a8cc",
-        "#ec4899",
-        "#84cc16"
-    ];
-}
-
-function exibirGraficoSemDados(canvasId, texto) {
-    const canvas = document.getElementById(canvasId);
-
-    if (!canvas || !canvas.parentElement) {
-        return;
-    }
-
-    const container = canvas.parentElement;
-    let mensagem = container.querySelector(".grafico-sem-dados");
-
-    if (!mensagem) {
-        mensagem = document.createElement("div");
-        mensagem.className = "grafico-sem-dados";
-        container.appendChild(mensagem);
-    }
-
-    mensagem.textContent = texto;
-    mensagem.hidden = false;
-    canvas.hidden = true;
-}
-
-function ocultarGraficoSemDados(canvasId) {
-    const canvas = document.getElementById(canvasId);
-
-    if (!canvas || !canvas.parentElement) {
-        return;
-    }
-
-    const mensagem =
-        canvas.parentElement.querySelector(".grafico-sem-dados");
-
-    if (mensagem) {
-        mensagem.hidden = true;
-    }
-
-    canvas.hidden = false;
-}
-
-/* ==========================================================
-   GRÁFICO: RANKING DE VENDEDORES
-========================================================== */
-
-function prepararRankingVendedores(dados) {
-    return Object.entries(contarOcorrencias(dados, "vendedor"))
-        .map(([nome, quantidade]) => ({ nome, quantidade }))
-        .sort((itemA, itemB) => itemB.quantidade - itemA.quantidade)
-        .slice(0, 10);
-}
-
-function criarGraficoRanking(dados) {
-    if (!chartDisponivel()) {
-        return;
-    }
-
-    const canvas = document.getElementById("graficoVendedores");
-
-    if (!canvas) {
-        return;
-    }
-
-    destruirGrafico(graficoRanking);
-
-    const ranking = prepararRankingVendedores(dados);
-
-    if (ranking.length === 0) {
-        graficoRanking = null;
-
-        exibirGraficoSemDados(
-            "graficoVendedores",
-            "Nenhuma matrícula encontrada para o ranking."
-        );
-
-        return;
-    }
-
-    ocultarGraficoSemDados("graficoVendedores");
-
-    const cores = obterCoresGrafico();
-
-    graficoRanking = new Chart(canvas.getContext("2d"), {
-        type: "bar",
-        data: {
-            labels: ranking.map((item) => item.nome),
-            datasets: [{
-                label: "Matrículas",
-                data: ranking.map((item) => item.quantidade),
-                backgroundColor: cores.principal,
-                borderColor: cores.principal,
-                borderWidth: 1,
-                borderRadius: 7,
-                borderSkipped: false,
-                maxBarThickness: 28
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: "y",
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    displayColors: false,
-                    callbacks: {
-                        label(contexto) {
-                            return formatarQuantidadeMatriculas(contexto.raw);
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0,
-                        color: cores.texto
-                    },
-                    grid: {
-                        color: cores.grade
-                    },
-                    border: {
-                        display: false
-                    }
-                },
-                y: {
-                    ticks: {
-                        color: cores.texto,
-                        callback(valor) {
-                            const texto = this.getLabelForValue(valor);
-                            return texto.length > 24
-                                ? `${texto.slice(0, 24)}…`
-                                : texto;
-                        }
-                    },
-                    grid: {
-                        display: false
-                    },
-                    border: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
-}
-
-/* ==========================================================
-   GRÁFICO: EVOLUÇÃO DIÁRIA
-========================================================== */
-
-function obterDiasDaSemana(periodo) {
-    const dias = [];
-
-    for (let indice = 0; indice < 7; indice += 1) {
-        const data = new Date(periodo.inicio);
-        data.setDate(data.getDate() + indice);
-        data.setHours(0, 0, 0, 0);
-        dias.push(data);
-    }
-
-    return dias;
-}
-
-function obterIndiceDiaSemana(data) {
-    const dia = data.getDay();
-    return dia === 0 ? 6 : dia - 1;
-}
-
-function prepararEvolucaoDiaria(dados, periodo) {
-    const dias = obterDiasDaSemana(periodo);
-    const valores = new Array(7).fill(0);
-    const nomes = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
-
-    dados.forEach((registro) => {
-        if (registro.data) {
-            valores[obterIndiceDiaSemana(registro.data)] += 1;
-        }
-    });
-
-    return {
-        labels: dias.map(
-            (data, indice) => `${nomes[indice]} ${formatarDataCurta(data)}`
-        ),
-        valores
-    };
-}
-
-function criarGraficoEvolucao(dados, periodo) {
-    if (!chartDisponivel()) {
-        return;
-    }
-
-    const canvas = document.getElementById("graficoEvolucao");
-
-    if (!canvas) {
-        return;
-    }
-
-    destruirGrafico(graficoEvolucao);
-
-    const evolucao = prepararEvolucaoDiaria(dados, periodo);
-    const contexto = canvas.getContext("2d");
-    const cores = obterCoresGrafico();
-
-    const gradiente = contexto.createLinearGradient(
-        0,
-        0,
-        0,
-        canvas.clientHeight || 300
-    );
-
-    gradiente.addColorStop(0, "rgba(31, 130, 255, 0.32)");
-    gradiente.addColorStop(1, "rgba(31, 130, 255, 0.02)");
-
-    ocultarGraficoSemDados("graficoEvolucao");
-
-    graficoEvolucao = new Chart(contexto, {
-        type: "line",
-        data: {
-            labels: evolucao.labels,
-            datasets: [{
-                label: "Matrículas",
-                data: evolucao.valores,
-                borderColor: cores.principal,
-                backgroundColor: gradiente,
-                borderWidth: 3,
-                fill: true,
-                tension: 0.35,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                pointBackgroundColor: "#ffffff",
-                pointBorderColor: cores.principal,
-                pointBorderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: "index",
-                intersect: false
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    displayColors: false,
-                    callbacks: {
-                        label(contextoTooltip) {
-                            return formatarQuantidadeMatriculas(
-                                contextoTooltip.raw
-                            );
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        color: cores.texto
-                    },
-                    grid: {
-                        display: false
-                    },
-                    border: {
-                        display: false
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0,
-                        color: cores.texto
-                    },
-                    grid: {
-                        color: cores.grade
-                    },
-                    border: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
-}
-
-/* ==========================================================
-   GRÁFICO: CURSOS
-========================================================== */
-
-function prepararDistribuicaoCursos(dados) {
-    return Object.entries(contarOcorrencias(dados, "curso"))
-        .map(([nome, quantidade]) => ({ nome, quantidade }))
-        .sort((itemA, itemB) => itemB.quantidade - itemA.quantidade);
-}
-
-function agruparCursosMenores(cursos, limite = 7) {
-    if (cursos.length <= limite) {
-        return cursos;
-    }
-
-    const principais = cursos.slice(0, limite);
-    const totalOutros = cursos
-        .slice(limite)
-        .reduce((total, item) => total + item.quantidade, 0);
-
-    return [
-        ...principais,
-        {
-            nome: "Outros",
-            quantidade: totalOutros
-        }
-    ];
-}
-
-function criarGraficoCursos(dados) {
-    if (!chartDisponivel()) {
-        return;
-    }
-
-    const canvas = document.getElementById("graficoCursos");
-
-    if (!canvas) {
-        return;
-    }
-
-    destruirGrafico(graficoCursos);
-
-    const cursos = agruparCursosMenores(
-        prepararDistribuicaoCursos(dados)
-    );
-
-    if (cursos.length === 0) {
-        graficoCursos = null;
-
-        exibirGraficoSemDados(
-            "graficoCursos",
-            "Nenhum curso encontrado no período."
-        );
-
-        return;
-    }
-
-    ocultarGraficoSemDados("graficoCursos");
-
-    const paleta = obterPaletaCategorias();
-
-    graficoCursos = new Chart(canvas.getContext("2d"), {
-        type: "doughnut",
-        data: {
-            labels: cursos.map((item) => item.nome),
-            datasets: [{
-                data: cursos.map((item) => item.quantidade),
-                backgroundColor: cursos.map(
-                    (_, indice) => paleta[indice % paleta.length]
-                ),
-                borderColor: "#ffffff",
-                borderWidth: 3,
-                hoverOffset: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: "65%",
-            plugins: {
-                legend: {
-                    position: "bottom",
-                    labels: {
-                        usePointStyle: true,
-                        pointStyle: "circle",
-                        padding: 16,
-                        color: "#ffffff"
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label(contextoTooltip) {
-                            const valor = Number(contextoTooltip.raw) || 0;
-                            const total = contextoTooltip.dataset.data.reduce(
-                                (soma, item) => soma + Number(item || 0),
-                                0
-                            );
-                            const percentual =
-                                total > 0 ? (valor / total) * 100 : 0;
-
-                            return (
-                                `${contextoTooltip.label}: ` +
-                                `${formatarQuantidadeMatriculas(valor)} ` +
-                                `(${percentual.toLocaleString("pt-BR", {
-                                    minimumFractionDigits: 1,
-                                    maximumFractionDigits: 1
-                                })}%)`
-                            );
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-/* ==========================================================
-   RESUMO FINANCEIRO
-========================================================== */
-
-function formatarMoeda(valor) {
-    return Number(valor || 0).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL"
-    });
+    if (elementos.comparativoDescricao) elementos.comparativoDescricao.textContent = `${atual} no período • ${anterior} no período anterior`;
 }
 
 function calcularResumoFinanceiro(dados, campo) {
-    return dados.reduce(
-        (resumo, registro) => {
-            const valor = Number(registro[campo]) || 0;
-            resumo.valor += valor;
-
-            if (valor > 0) {
-                resumo.quantidade += 1;
-            }
-
-            return resumo;
-        },
-        { valor: 0, quantidade: 0 }
-    );
+    return dados.reduce((resumo, registro) => { const valor = Number(registro[campo]) || 0; resumo.valor += valor; if (valor > 0) resumo.quantidade++; return resumo; }, { valor: 0, quantidade: 0 });
 }
-
 function atualizarResumoFinanceiro() {
-    const boleto = calcularResumoFinanceiro(dadosFiltrados, "boleto");
-    const cartao = calcularResumoFinanceiro(dadosFiltrados, "cartaoAvista");
-    const taxa = calcularResumoFinanceiro(dadosFiltrados, "taxaMatricula");
-
-    if (elementos.faturamentoBoleto) {
-        elementos.faturamentoBoleto.textContent = formatarMoeda(boleto.valor);
-    }
-
-    if (elementos.quantidadeBoleto) {
-        elementos.quantidadeBoleto.textContent =
-            `${boleto.quantidade} ${boleto.quantidade === 1 ? "venda" : "vendas"}`;
-    }
-
-    if (elementos.faturamentoCartao) {
-        elementos.faturamentoCartao.textContent = formatarMoeda(cartao.valor);
-    }
-
-    if (elementos.quantidadeCartao) {
-        elementos.quantidadeCartao.textContent =
-            `${cartao.quantidade} ${cartao.quantidade === 1 ? "venda" : "vendas"}`;
-    }
-
-    if (elementos.faturamentoTaxa) {
-        elementos.faturamentoTaxa.textContent = formatarMoeda(taxa.valor);
-    }
-
-    if (elementos.quantidadeTaxa) {
-        elementos.quantidadeTaxa.textContent =
-            `${taxa.quantidade} ${taxa.quantidade === 1 ? "taxa" : "taxas"}`;
-    }
+    const itens = [
+        ["boleto", elementos.faturamentoBoleto, elementos.quantidadeBoleto, "venda", "vendas"],
+        ["cartaoAvista", elementos.faturamentoCartao, elementos.quantidadeCartao, "venda", "vendas"],
+        ["taxaMatricula", elementos.faturamentoTaxa, elementos.quantidadeTaxa, "taxa", "taxas"]
+    ];
+    itens.forEach(([campo, valorEl, qtdEl, singular, plural]) => {
+        const resumo = calcularResumoFinanceiro(dadosFiltrados, campo);
+        if (valorEl) valorEl.textContent = formatarMoeda(resumo.valor);
+        if (qtdEl) qtdEl.textContent = `${resumo.quantidade} ${resumo.quantidade === 1 ? singular : plural}`;
+    });
 }
 
-/* ==========================================================
-   APLICAÇÃO DOS DADOS
-========================================================== */
+function chartDisponivel() { return typeof Chart !== "undefined"; }
+function destruirGrafico(grafico) { if (grafico?.destroy) grafico.destroy(); }
+function obterCoresGrafico() { return { principal: "#1f82ff", texto: "#ffffff", grade: "rgba(255,255,255,.16)" }; }
+function obterPaletaCategorias() { return ["#1f82ff", "#26d995", "#ff7400", "#8b5cf6", "#ff5f68", "#00a8cc", "#ec4899", "#84cc16"]; }
+function exibirGraficoSemDados(canvasId, texto) {
+    const canvas = document.getElementById(canvasId); if (!canvas?.parentElement) return;
+    let msg = canvas.parentElement.querySelector(".grafico-sem-dados");
+    if (!msg) { msg = document.createElement("div"); msg.className = "grafico-sem-dados"; canvas.parentElement.appendChild(msg); }
+    msg.textContent = texto; msg.hidden = false; canvas.hidden = true;
+}
+function ocultarGraficoSemDados(canvasId) {
+    const canvas = document.getElementById(canvasId); if (!canvas?.parentElement) return;
+    const msg = canvas.parentElement.querySelector(".grafico-sem-dados"); if (msg) msg.hidden = true; canvas.hidden = false;
+}
+
+function criarGraficoRanking(dados) {
+    if (!chartDisponivel()) return;
+    const canvas = document.getElementById("graficoVendedores"); if (!canvas) return;
+    destruirGrafico(graficoRanking);
+    const ranking = Object.entries(contarOcorrencias(dados, "vendedor")).map(([nome, quantidade]) => ({ nome, quantidade })).sort((a,b) => b.quantidade-a.quantidade).slice(0,10);
+    if (!ranking.length) { graficoRanking = null; exibirGraficoSemDados("graficoVendedores", "Nenhuma matrícula encontrada."); return; }
+    ocultarGraficoSemDados("graficoVendedores"); const c = obterCoresGrafico();
+    graficoRanking = new Chart(canvas, { type:"bar", data:{ labels:ranking.map(i=>i.nome), datasets:[{ data:ranking.map(i=>i.quantidade), backgroundColor:c.principal, borderRadius:7, maxBarThickness:28 }] }, options:{ responsive:true, maintainAspectRatio:false, indexAxis:"y", plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true,ticks:{precision:0,color:c.texto},grid:{color:c.grade}},y:{ticks:{color:c.texto},grid:{display:false}}} } });
+}
+
+function prepararEvolucaoDiaria(dados, periodo) {
+    const mapa = new Map();
+    dados.forEach(r => { const chave = obterChaveData(r.data); mapa.set(chave, (mapa.get(chave)||0)+1); });
+    const labels=[], valores=[]; const cursor = new Date(periodo.inicio); cursor.setHours(0,0,0,0); const fim = new Date(periodo.fim); fim.setHours(0,0,0,0);
+    while (cursor <= fim) { labels.push(formatarDataCurta(cursor)); valores.push(mapa.get(obterChaveData(cursor)) || 0); cursor.setDate(cursor.getDate()+1); }
+    return { labels, valores };
+}
+function criarGraficoEvolucao(dados, periodo) {
+    if (!chartDisponivel()) return; const canvas = document.getElementById("graficoEvolucao"); if (!canvas) return;
+    destruirGrafico(graficoEvolucao); const ev = prepararEvolucaoDiaria(dados, periodo); ocultarGraficoSemDados("graficoEvolucao"); const c=obterCoresGrafico();
+    graficoEvolucao = new Chart(canvas, { type:"line", data:{labels:ev.labels,datasets:[{data:ev.valores,borderColor:c.principal,backgroundColor:"rgba(31,130,255,.16)",borderWidth:3,fill:true,tension:.3,pointRadius:3,pointBackgroundColor:"#fff"}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:c.texto,maxTicksLimit:16},grid:{display:false}},y:{beginAtZero:true,ticks:{precision:0,color:c.texto},grid:{color:c.grade}}}} });
+}
+function criarGraficoCursos(dados) {
+    if (!chartDisponivel()) return; const canvas=document.getElementById("graficoCursos"); if(!canvas)return; destruirGrafico(graficoCursos);
+    let cursos=Object.entries(contarOcorrencias(dados,"curso")).map(([nome,quantidade])=>({nome,quantidade})).sort((a,b)=>b.quantidade-a.quantidade);
+    if(cursos.length>7){const outros=cursos.slice(7).reduce((s,i)=>s+i.quantidade,0);cursos=[...cursos.slice(0,7),{nome:"Outros",quantidade:outros}];}
+    if(!cursos.length){graficoCursos=null;exibirGraficoSemDados("graficoCursos","Nenhum curso encontrado.");return;} ocultarGraficoSemDados("graficoCursos"); const paleta=obterPaletaCategorias();
+    graficoCursos=new Chart(canvas,{type:"doughnut",data:{labels:cursos.map(i=>i.nome),datasets:[{data:cursos.map(i=>i.quantidade),backgroundColor:cursos.map((_,i)=>paleta[i%paleta.length]),borderColor:"#fff",borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:"65%",plugins:{legend:{position:"bottom",labels:{color:"#fff",usePointStyle:true,padding:12}}}}});
+}
 
 function aplicarFiltros() {
     const periodo = obterPeriodoSelecionado();
-
-    dadosFiltrados = dadosOriginais.filter((registro) =>
-        registroEstaNoPeriodo(registro, periodo.inicio, periodo.fim)
-    );
-
-    atualizarPeriodoExibido(periodo);
-    atualizarIndicadores(dadosFiltrados, periodo);
-    atualizarResumoFinanceiro();
-    atualizarDestaques(dadosFiltrados);
-    atualizarComparativoSemana();
-
-    criarGraficoRanking(dadosFiltrados);
-    criarGraficoEvolucao(dadosFiltrados, periodo);
-    criarGraficoCursos(dadosFiltrados);
-
-    exibirMensagem(
-        `${formatarNumero(dadosFiltrados.length)} matrículas ` +
-        "encontradas na semana atual.",
-        "sucesso"
-    );
+    const polo = elementos.filtroPolo?.value || "";
+    const consultor = elementos.filtroConsultor?.value || "";
+    dadosFiltrados = dadosOriginais.filter(r => registroEstaNoPeriodo(r, periodo.inicio, periodo.fim) && (!polo || r.polo === polo) && (!consultor || r.vendedor === consultor));
+    atualizarPeriodoExibido(periodo); atualizarIndicadores(dadosFiltrados); atualizarResumoFinanceiro(); atualizarDestaques(dadosFiltrados); atualizarComparativoPeriodo(periodo);
+    criarGraficoRanking(dadosFiltrados); criarGraficoEvolucao(dadosFiltrados, periodo); criarGraficoCursos(dadosFiltrados);
+    const descricao = [polo && `polo ${polo}`, consultor && `consultor ${consultor}`].filter(Boolean).join(" e ");
+    exibirMensagem(`${formatarNumero(dadosFiltrados.length)} matrículas encontradas${descricao ? ` para ${descricao}` : ""}.`, "sucesso");
 }
 
-/* ==========================================================
-   INICIALIZAÇÃO
-========================================================== */
+function limparFiltros() {
+    if (elementos.filtroDataInicio) elementos.filtroDataInicio.value = "";
+    if (elementos.filtroDataFim) elementos.filtroDataFim.value = "";
+    if (elementos.filtroPolo) elementos.filtroPolo.value = "";
+    if (elementos.filtroConsultor) elementos.filtroConsultor.value = "";
+    configurarFiltrosIniciais(); aplicarFiltros();
+}
 
 async function atualizarDashboard() {
     definirEstadoCarregamento(true);
-
-    try {
-        await carregarDados();
-    } finally {
-        definirEstadoCarregamento(false);
-    }
+    try { await carregarDados(); }
+    catch (erro) { console.error(erro); exibirMensagem(`Não foi possível carregar os dados: ${erro.message}`, "erro"); }
+    finally { definirEstadoCarregamento(false); }
 }
 
-if (elementos.btnAtualizar) {
-    elementos.btnAtualizar.addEventListener("click", atualizarDashboard);
-}
-
+[elementos.filtroDataInicio, elementos.filtroDataFim, elementos.filtroPolo, elementos.filtroConsultor].forEach(el => el?.addEventListener("change", aplicarFiltros));
+elementos.btnLimparFiltros?.addEventListener("click", limparFiltros);
+elementos.btnAtualizar?.addEventListener("click", atualizarDashboard);
 document.addEventListener("DOMContentLoaded", atualizarDashboard);

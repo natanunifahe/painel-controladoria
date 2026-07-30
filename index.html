@@ -46,15 +46,50 @@
         <section class="faixa-periodo">
             <div class="periodo-icone"><i class="bi bi-calendar-week"></i></div>
             <div>
-                <small>SEMANA ANALISADA</small>
+                <small>PERÍODO ANALISADO</small>
                 <strong id="periodoAnalisado">—</strong>
-                <span>Segunda-feira a domingo</span>
+                <span>Selecione dias específicos nos filtros</span>
             </div>
             <div class="unidade-identificacao">
                 <small>UNIDADE</small>
                 <strong>Central</strong>
             </div>
         </section>
+
+        <section class="secao-filtros" aria-label="Filtros do dashboard">
+            <div class="titulo-secao">
+                <div>
+                    <span class="titulo-secao-icone"><i class="bi bi-funnel"></i></span>
+                    <div>
+                        <small>CONSULTA PERSONALIZADA</small>
+                        <h2>Filtros</h2>
+                    </div>
+                </div>
+                <button type="button" id="btnLimparFiltros" class="botao-limpar">
+                    <i class="bi bi-eraser"></i> Limpar filtros
+                </button>
+            </div>
+
+            <div class="filtros-grid filtros-grid-quatro">
+                <div class="campo-filtro">
+                    <label for="filtroDataInicio"><i class="bi bi-calendar-date"></i> Data inicial</label>
+                    <input type="date" id="filtroDataInicio">
+                </div>
+                <div class="campo-filtro">
+                    <label for="filtroDataFim"><i class="bi bi-calendar-date"></i> Data final</label>
+                    <input type="date" id="filtroDataFim">
+                </div>
+                <div class="campo-filtro">
+                    <label for="filtroPolo"><i class="bi bi-geo-alt"></i> Polo</label>
+                    <select id="filtroPolo"><option value="">Todos os polos</option></select>
+                </div>
+                <div class="campo-filtro">
+                    <label for="filtroConsultor"><i class="bi bi-person-badge"></i> Consultor</label>
+                    <select id="filtroConsultor"><option value="">Todos os consultores</option></select>
+                </div>
+            </div>
+        </section>
+
 <section class="financeiro-grid">
 
     <article class="card-financeiro">
@@ -71,7 +106,7 @@
 
         <div class="card-financeiro-conteudo">
 
-            <small>Faturamento semanal</small>
+            <small>Faturamento no período</small>
 
             <strong id="faturamentoBoleto">
                 R$ 0,00
@@ -100,7 +135,7 @@
 
         <div class="card-financeiro-conteudo">
 
-            <small>Faturamento semanal</small>
+            <small>Faturamento no período</small>
 
             <strong id="faturamentoCartao">
                 R$ 0,00
@@ -129,7 +164,7 @@
 
         <div class="card-financeiro-conteudo">
 
-            <small>Arrecadação semanal</small>
+            <small>Arrecadação no período</small>
 
             <strong id="faturamentoTaxa">
                 R$ 0,00
@@ -153,7 +188,7 @@
                 <div class="card-indicador-conteudo">
                     <span>Total de matrículas</span>
                     <strong id="totalMatriculas">0</strong>
-                    <p>Registros da semana atual</p>
+                    <p>Registros do período selecionado</p>
                 </div>
             </article>
 
@@ -177,7 +212,7 @@
                 <div class="card-indicador-conteudo">
                     <span>Vendedores ativos</span>
                     <strong id="totalVendedores">0</strong>
-                    <p>Consultores com matrículas na semana</p>
+                    <p>Consultores com matrículas no período</p>
                 </div>
             </article>
 
@@ -198,7 +233,7 @@
             <article class="card-grafico card-ranking">
                 <div class="card-cabecalho">
                     <div>
-                        <span class="card-cabecalho-subtitulo">DESEMPENHO DA SEMANA</span>
+                        <span class="card-cabecalho-subtitulo">DESEMPENHO DO PERÍODO</span>
                         <h2>Ranking de vendedores</h2>
                         <p>Quantidade de matrículas por vendedor</p>
                     </div>
@@ -213,7 +248,7 @@
                 <article class="card-destaque-lateral">
                     <div class="destaque-icone"><i class="bi bi-trophy"></i></div>
                     <div class="destaque-conteudo">
-                        <span>Vendedor da semana</span>
+                        <span>Consultor destaque</span>
                         <strong id="melhorVendedor">—</strong>
                         <small id="melhorVendedorQuantidade">0 matrículas</small>
                     </div>
@@ -245,7 +280,7 @@
                     <div>
                         <span class="card-cabecalho-subtitulo">EVOLUÇÃO</span>
                         <h2>Matrículas por dia</h2>
-                        <p>Distribuição de segunda-feira a domingo</p>
+                        <p>Agrupamento correto de matrículas por data</p>
                     </div>
                     <div class="card-cabecalho-icone"><i class="bi bi-graph-up"></i></div>
                 </div>
@@ -257,7 +292,7 @@
                     <div>
                         <span class="card-cabecalho-subtitulo">DISTRIBUIÇÃO</span>
                         <h2>Matrículas por curso</h2>
-                        <p>Participação dos principais cursos da semana</p>
+                        <p>Participação dos principais cursos do período</p>
                     </div>
                     <div class="card-cabecalho-icone"><i class="bi bi-pie-chart"></i></div>
                 </div>
