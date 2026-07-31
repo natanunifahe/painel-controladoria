@@ -9,9 +9,11 @@ const CONFIG = {
         vendedor: "3",
         polo: "4",
         curso: "12",
-        boleto: "16",
+        // As chaves da API começam em 0: coluna 15 = "14", coluna 18 = "17", etc.
+        quantidadeVendas: "14",
         cartaoAvista: "17",
-        taxaMatricula: "26"
+        boleto: "18",
+        taxaMatricula: "27"
     }
 };
 
@@ -43,6 +45,11 @@ const elementos = {
     quantidadeCartao: document.getElementById("quantidadeCartao"),
     faturamentoTaxa: document.getElementById("faturamentoTaxa"),
     quantidadeTaxa: document.getElementById("quantidadeTaxa"),
+    faturamentoBruto: document.getElementById("faturamentoBruto"),
+    brutoCartao: document.getElementById("brutoCartao"),
+    brutoBoleto: document.getElementById("brutoBoleto"),
+    brutoVendas: document.getElementById("brutoVendas"),
+    ticketMedio: document.getElementById("ticketMedio"),
     filtroDataInicio: document.getElementById("filtroDataInicio"),
     filtroDataFim: document.getElementById("filtroDataFim"),
     filtroPolo: document.getElementById("filtroPolo"),
@@ -198,6 +205,7 @@ async function carregarDados() {
         vendedor: limparTexto(registro[CONFIG.campos.vendedor]),
         polo: limparTexto(registro[CONFIG.campos.polo]),
         curso: limparTexto(registro[CONFIG.campos.curso]),
+        quantidadeVendas: converterValorMonetario(registro[CONFIG.campos.quantidadeVendas]),
         boleto: converterValorMonetario(registro[CONFIG.campos.boleto]),
         cartaoAvista: converterValorMonetario(registro[CONFIG.campos.cartaoAvista]),
         taxaMatricula: converterValorMonetario(registro[CONFIG.campos.taxaMatricula])
@@ -256,17 +264,32 @@ function atualizarComparativoPeriodo(periodo) {
 function calcularResumoFinanceiro(dados, campo) {
     return dados.reduce((resumo, registro) => { const valor = Number(registro[campo]) || 0; resumo.valor += valor; if (valor > 0) resumo.quantidade++; return resumo; }, { valor: 0, quantidade: 0 });
 }
+function somarCampo(dados, campo) {
+    return dados.reduce((total, registro) => total + (Number(registro[campo]) || 0), 0);
+}
+
 function atualizarResumoFinanceiro() {
-    const itens = [
-        ["boleto", elementos.faturamentoBoleto, elementos.quantidadeBoleto, "venda", "vendas"],
-        ["cartaoAvista", elementos.faturamentoCartao, elementos.quantidadeCartao, "venda", "vendas"],
-        ["taxaMatricula", elementos.faturamentoTaxa, elementos.quantidadeTaxa, "taxa", "taxas"]
-    ];
-    itens.forEach(([campo, valorEl, qtdEl, singular, plural]) => {
-        const resumo = calcularResumoFinanceiro(dadosFiltrados, campo);
-        if (valorEl) valorEl.textContent = formatarMoeda(resumo.valor);
-        if (qtdEl) qtdEl.textContent = `${resumo.quantidade} ${resumo.quantidade === 1 ? singular : plural}`;
-    });
+    const valorBoleto = somarCampo(dadosFiltrados, "boleto");
+    const valorCartao = somarCampo(dadosFiltrados, "cartaoAvista");
+    const valorTaxa = somarCampo(dadosFiltrados, "taxaMatricula");
+    const quantidadeVendas = somarCampo(dadosFiltrados, "quantidadeVendas");
+    const faturamentoBruto = valorCartao + valorBoleto;
+    const ticketMedio = quantidadeVendas > 0 ? faturamentoBruto / quantidadeVendas : 0;
+
+    if (elementos.faturamentoBoleto) elementos.faturamentoBoleto.textContent = formatarMoeda(valorBoleto);
+    if (elementos.faturamentoCartao) elementos.faturamentoCartao.textContent = formatarMoeda(valorCartao);
+    if (elementos.faturamentoTaxa) elementos.faturamentoTaxa.textContent = formatarMoeda(valorTaxa);
+
+    const textoVendas = `${formatarNumero(quantidadeVendas)} ${quantidadeVendas === 1 ? "venda" : "vendas"}`;
+    if (elementos.quantidadeBoleto) elementos.quantidadeBoleto.textContent = textoVendas;
+    if (elementos.quantidadeCartao) elementos.quantidadeCartao.textContent = textoVendas;
+    if (elementos.quantidadeTaxa) elementos.quantidadeTaxa.textContent = `${formatarNumero(dadosFiltrados.filter(r => r.taxaMatricula > 0).length)} taxas lançadas`;
+
+    if (elementos.faturamentoBruto) elementos.faturamentoBruto.textContent = formatarMoeda(faturamentoBruto);
+    if (elementos.brutoCartao) elementos.brutoCartao.textContent = formatarMoeda(valorCartao);
+    if (elementos.brutoBoleto) elementos.brutoBoleto.textContent = formatarMoeda(valorBoleto);
+    if (elementos.brutoVendas) elementos.brutoVendas.textContent = textoVendas;
+    if (elementos.ticketMedio) elementos.ticketMedio.textContent = formatarMoeda(ticketMedio);
 }
 
 function chartDisponivel() { return typeof Chart !== "undefined"; }
