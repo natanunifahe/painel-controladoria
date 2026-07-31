@@ -59,7 +59,8 @@ const elementos = {
     filtroDataFim: document.getElementById("filtroDataFim"),
     filtroPolo: document.getElementById("filtroPolo"),
     filtroConsultor: document.getElementById("filtroConsultor"),
-    btnLimparFiltros: document.getElementById("btnLimparFiltros")
+    btnLimparFiltros: document.getElementById("btnLimparFiltros"),
+    periodoAplicado: document.getElementById("periodoAplicado")
 };
 
 function limparTexto(valor) {
@@ -399,15 +400,46 @@ function criarGraficoCursos(dados) {
     graficoCursos=new Chart(canvas,{type:"doughnut",data:{labels:cursos.map(i=>i.nome),datasets:[{data:cursos.map(i=>i.quantidade),backgroundColor:cursos.map((_,i)=>paleta[i%paleta.length]),borderColor:"#fff",borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:"65%",plugins:{legend:{position:"bottom",labels:{color:"#fff",usePointStyle:true,padding:12}}}}});
 }
 
+function atualizarPeriodoAplicado(periodo) {
+    if (!elementos.periodoAplicado) return;
+    const span = elementos.periodoAplicado.querySelector("span");
+    if (!span) return;
+    span.textContent = `Período aplicado: ${formatarDataBrasileira(periodo.inicio)} a ${formatarDataBrasileira(periodo.fim)}`;
+}
+
 function aplicarFiltros() {
     const periodo = obterPeriodoSelecionado();
     const polo = elementos.filtroPolo?.value || "";
     const consultor = elementos.filtroConsultor?.value || "";
-    dadosFiltrados = dadosOriginais.filter(r => registroEstaNoPeriodo(r, periodo.inicio, periodo.fim) && (!polo || r.polo === polo) && (!consultor || r.vendedor === consultor));
-    atualizarIndicadores(dadosFiltrados); atualizarStatusMatriculas(); atualizarResumoFinanceiro(); atualizarDestaques(dadosFiltrados); atualizarComparativoPeriodo(periodo);
-    criarGraficoRanking(dadosFiltrados); criarGraficoEvolucao(dadosFiltrados, periodo); criarGraficoCursos(dadosFiltrados);
-    const descricao = [polo && `polo ${polo}`, consultor && `consultor ${consultor}`].filter(Boolean).join(" e ");
-    exibirMensagem(`${formatarNumero(somarMatriculas(dadosFiltrados))} matrículas encontradas${descricao ? ` para ${descricao}` : ""}.`, "sucesso");
+
+    dadosFiltrados = dadosOriginais.filter(registro =>
+        registroEstaNoPeriodo(registro, periodo.inicio, periodo.fim) &&
+        (!polo || registro.polo === polo) &&
+        (!consultor || registro.vendedor === consultor)
+    );
+
+    atualizarPeriodoAplicado(periodo);
+
+    // Todas as análises abaixo usam exclusivamente o período escolhido no calendário.
+    atualizarIndicadores(dadosFiltrados);
+    atualizarStatusMatriculas();
+    atualizarResumoFinanceiro();
+    atualizarDestaques(dadosFiltrados);
+    atualizarComparativoPeriodo(periodo);
+    criarGraficoRanking(dadosFiltrados);
+    criarGraficoEvolucao(dadosFiltrados, periodo);
+    criarGraficoCursos(dadosFiltrados);
+
+    const descricao = [polo && `polo ${polo}`, consultor && `consultor ${consultor}`]
+        .filter(Boolean)
+        .join(" e ");
+
+    exibirMensagem(
+        `${formatarNumero(somarMatriculas(dadosFiltrados))} matrículas encontradas entre ` +
+        `${formatarDataBrasileira(periodo.inicio)} e ${formatarDataBrasileira(periodo.fim)}` +
+        `${descricao ? ` para ${descricao}` : ""}.`,
+        dadosFiltrados.length ? "sucesso" : "normal"
+    );
 }
 
 function limparFiltros() {

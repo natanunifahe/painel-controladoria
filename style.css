@@ -1716,3 +1716,22 @@ canvas {
 @media (max-width: 650px) {
     .status-matriculas-grid { grid-template-columns: 1fr; }
 }
+
+
+/* =========================================================
+   PERÍODO APLICADO AOS INDICADORES E GRÁFICOS
+========================================================= */
+.periodo-aplicado {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: -5px 0 16px;
+    padding: 11px 13px;
+    color: var(--texto-claro);
+    border: 1px solid rgba(31, 130, 255, 0.28);
+    border-radius: 11px;
+    background: rgba(31, 130, 255, 0.07);
+    font-size: 12px;
+    font-weight: 700;
+}
+.periodo-aplicado i { color: #55adff; font-size: 15px; }
