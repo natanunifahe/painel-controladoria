@@ -9,6 +9,8 @@ const CONFIG = {
         vendedor: "3",
         polo: "4",
         curso: "12",
+        quantidadeMatriculas: "7",
+        statusMatricula: "36",
         // As chaves da API começam em 0: coluna 15 = "14", coluna 18 = "17", etc.
         quantidadeVendas: "14",
         cartaoAvista: "17",
@@ -32,8 +34,7 @@ const elementos = {
     melhorVendedorQuantidade: document.getElementById("melhorVendedorQuantidade"),
     cursoDestaque: document.getElementById("cursoDestaque"),
     cursoDestaqueQuantidade: document.getElementById("cursoDestaqueQuantidade"),
-    periodoExibicao: document.getElementById("periodoAnalisado"),
-    comparativoSemana: document.getElementById("variacaoSemanal"),
+        comparativoSemana: document.getElementById("variacaoSemanal"),
     comparativoDescricao: document.getElementById("variacaoSemanalDetalhe"),
     ultimaAtualizacao: document.getElementById("ultimaAtualizacao"),
     btnAtualizar: document.getElementById("btnAtualizar"),
@@ -50,6 +51,9 @@ const elementos = {
     brutoBoleto: document.getElementById("brutoBoleto"),
     brutoVendas: document.getElementById("brutoVendas"),
     ticketMedio: document.getElementById("ticketMedio"),
+    statusNaoConfirmado: document.getElementById("statusNaoConfirmado"),
+    statusValidado: document.getElementById("statusValidado"),
+    statusCancelado: document.getElementById("statusCancelado"),
     filtroDataInicio: document.getElementById("filtroDataInicio"),
     filtroDataFim: document.getElementById("filtroDataFim"),
     filtroPolo: document.getElementById("filtroPolo"),
@@ -127,10 +131,26 @@ function formatarQuantidadeMatriculas(qtd) { return `${qtd} ${qtd === 1 ? "matr�
 function datasSaoIguais(a, b) { return a && b && obterChaveData(a) === obterChaveData(b); }
 function registroEstaNoPeriodo(registro, inicio, fim) { return Boolean(registro.data && registro.data >= inicio && registro.data <= fim); }
 
+function obterQuantidadeMatriculas(registro) {
+    const quantidade = Number(registro.quantidadeMatriculas);
+    return Number.isFinite(quantidade) && quantidade > 0 ? quantidade : 0;
+}
+
+function somarMatriculas(dados) {
+    return dados.reduce((total, registro) => total + obterQuantidadeMatriculas(registro), 0);
+}
+
+function normalizarStatus(valor) {
+    return limparTexto(valor)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase();
+}
+
 function contarOcorrencias(dados, campo) {
     return dados.reduce((acc, registro) => {
         const valor = limparTexto(registro[campo]);
-        if (valor) acc[valor] = (acc[valor] || 0) + 1;
+        if (valor) acc[valor] = (acc[valor] || 0) + obterQuantidadeMatriculas(registro);
         return acc;
     }, {});
 }
@@ -205,6 +225,8 @@ async function carregarDados() {
         vendedor: limparTexto(registro[CONFIG.campos.vendedor]),
         polo: limparTexto(registro[CONFIG.campos.polo]),
         curso: limparTexto(registro[CONFIG.campos.curso]),
+        quantidadeMatriculas: converterValorMonetario(registro[CONFIG.campos.quantidadeMatriculas]),
+        statusMatricula: limparTexto(registro[CONFIG.campos.statusMatricula]),
         quantidadeVendas: converterValorMonetario(registro[CONFIG.campos.quantidadeVendas]),
         boleto: converterValorMonetario(registro[CONFIG.campos.boleto]),
         cartaoAvista: converterValorMonetario(registro[CONFIG.campos.cartaoAvista]),
@@ -221,14 +243,14 @@ function animarNumero(elemento, valorFinal, casas = 0) {
     elemento.textContent = Number(valorFinal || 0).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
 }
 
-function contarMatriculasHoje(dados) { const hoje = new Date(); return dados.filter(r => datasSaoIguais(r.data, hoje)).length; }
+function contarMatriculasHoje(dados) { const hoje = new Date(); return somarMatriculas(dados.filter(r => datasSaoIguais(r.data, hoje))); }
 function calcularMediaDiaria(dados) {
     const diasComRegistro = new Set(dados.map(r => obterChaveData(r.data)).filter(Boolean)).size;
-    return diasComRegistro ? dados.length / diasComRegistro : 0;
+    return diasComRegistro ? somarMatriculas(dados) / diasComRegistro : 0;
 }
 
 function atualizarIndicadores(dados) {
-    animarNumero(elementos.totalMatriculas, dados.length);
+    animarNumero(elementos.totalMatriculas, somarMatriculas(dados));
     animarNumero(elementos.matriculasHoje, contarMatriculasHoje(dados));
     animarNumero(elementos.vendedoresAtivos, contarValoresUnicos(dados, "vendedor"));
     animarNumero(elementos.mediaDiaria, calcularMediaDiaria(dados), 1);
@@ -241,18 +263,14 @@ function atualizarDestaques(dados) {
     atualizarDestaque(elementos.melhorVendedor, elementos.melhorVendedorQuantidade, obterMaiorOcorrencia(dados, "vendedor"));
     atualizarDestaque(elementos.cursoDestaque, elementos.cursoDestaqueQuantidade, obterMaiorOcorrencia(dados, "curso"));
 }
-function atualizarPeriodoExibido(periodo) {
-    if (elementos.periodoExibicao) elementos.periodoExibicao.textContent = `${formatarDataBrasileira(periodo.inicio)} a ${formatarDataBrasileira(periodo.fim)}`;
-}
-
 function atualizarComparativoPeriodo(periodo) {
     const duracao = Math.round((periodo.fim - periodo.inicio) / 86400000) + 1;
     const fimAnterior = new Date(periodo.inicio); fimAnterior.setDate(fimAnterior.getDate() - 1); fimAnterior.setHours(23,59,59,999);
     const inicioAnterior = new Date(fimAnterior); inicioAnterior.setDate(inicioAnterior.getDate() - duracao + 1); inicioAnterior.setHours(0,0,0,0);
     const polo = elementos.filtroPolo?.value || "";
     const vendedor = elementos.filtroConsultor?.value || "";
-    const anterior = dadosOriginais.filter(r => registroEstaNoPeriodo(r, inicioAnterior, fimAnterior) && (!polo || r.polo === polo) && (!vendedor || r.vendedor === vendedor)).length;
-    const atual = dadosFiltrados.length;
+    const anterior = somarMatriculas(dadosOriginais.filter(r => registroEstaNoPeriodo(r, inicioAnterior, fimAnterior) && (!polo || r.polo === polo) && (!vendedor || r.vendedor === vendedor)));
+    const atual = somarMatriculas(dadosFiltrados);
     const variacao = anterior === 0 ? (atual > 0 ? 100 : 0) : ((atual - anterior) / anterior) * 100;
     if (elementos.comparativoSemana) {
         elementos.comparativoSemana.textContent = `${variacao > 0 ? "+" : ""}${variacao.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
@@ -292,6 +310,23 @@ function atualizarResumoFinanceiro() {
     if (elementos.ticketMedio) elementos.ticketMedio.textContent = formatarMoeda(ticketMedio);
 }
 
+function atualizarStatusMatriculas() {
+    const totais = dadosFiltrados.reduce((resultado, registro) => {
+        const status = normalizarStatus(registro.statusMatricula);
+        const quantidade = obterQuantidadeMatriculas(registro);
+
+        if (status === "NAO CONFIRMADO") resultado.naoConfirmado += quantidade;
+        else if (status === "VALIDADO") resultado.validado += quantidade;
+        else if (status === "CANCELADO") resultado.cancelado += quantidade;
+
+        return resultado;
+    }, { naoConfirmado: 0, validado: 0, cancelado: 0 });
+
+    animarNumero(elementos.statusNaoConfirmado, totais.naoConfirmado);
+    animarNumero(elementos.statusValidado, totais.validado);
+    animarNumero(elementos.statusCancelado, totais.cancelado);
+}
+
 function chartDisponivel() { return typeof Chart !== "undefined"; }
 function destruirGrafico(grafico) { if (grafico?.destroy) grafico.destroy(); }
 function obterCoresGrafico() { return { principal: "#1f82ff", texto: "#ffffff", grade: "rgba(255,255,255,.16)" }; }
@@ -319,7 +354,7 @@ function criarGraficoRanking(dados) {
 
 function prepararEvolucaoDiaria(dados, periodo) {
     const mapa = new Map();
-    dados.forEach(r => { const chave = obterChaveData(r.data); mapa.set(chave, (mapa.get(chave)||0)+1); });
+    dados.forEach(r => { const chave = obterChaveData(r.data); mapa.set(chave, (mapa.get(chave)||0) + obterQuantidadeMatriculas(r)); });
     const labels=[], valores=[]; const cursor = new Date(periodo.inicio); cursor.setHours(0,0,0,0); const fim = new Date(periodo.fim); fim.setHours(0,0,0,0);
     while (cursor <= fim) { labels.push(formatarDataCurta(cursor)); valores.push(mapa.get(obterChaveData(cursor)) || 0); cursor.setDate(cursor.getDate()+1); }
     return { labels, valores };
@@ -342,10 +377,10 @@ function aplicarFiltros() {
     const polo = elementos.filtroPolo?.value || "";
     const consultor = elementos.filtroConsultor?.value || "";
     dadosFiltrados = dadosOriginais.filter(r => registroEstaNoPeriodo(r, periodo.inicio, periodo.fim) && (!polo || r.polo === polo) && (!consultor || r.vendedor === consultor));
-    atualizarPeriodoExibido(periodo); atualizarIndicadores(dadosFiltrados); atualizarResumoFinanceiro(); atualizarDestaques(dadosFiltrados); atualizarComparativoPeriodo(periodo);
+    atualizarIndicadores(dadosFiltrados); atualizarStatusMatriculas(); atualizarResumoFinanceiro(); atualizarDestaques(dadosFiltrados); atualizarComparativoPeriodo(periodo);
     criarGraficoRanking(dadosFiltrados); criarGraficoEvolucao(dadosFiltrados, periodo); criarGraficoCursos(dadosFiltrados);
     const descricao = [polo && `polo ${polo}`, consultor && `consultor ${consultor}`].filter(Boolean).join(" e ");
-    exibirMensagem(`${formatarNumero(dadosFiltrados.length)} matrículas encontradas${descricao ? ` para ${descricao}` : ""}.`, "sucesso");
+    exibirMensagem(`${formatarNumero(somarMatriculas(dadosFiltrados))} matrículas encontradas${descricao ? ` para ${descricao}` : ""}.`, "sucesso");
 }
 
 function limparFiltros() {

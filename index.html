@@ -43,17 +43,33 @@
     </header>
 
     <main class="painel">
-        <section class="faixa-periodo">
-            <div class="periodo-icone"><i class="bi bi-calendar-week"></i></div>
-            <div>
-                <small>PERÍODO ANALISADO</small>
-                <strong id="periodoAnalisado">—</strong>
-                <span>Selecione dias específicos nos filtros</span>
-            </div>
-            <div class="unidade-identificacao">
-                <small>UNIDADE</small>
-                <strong>Central</strong>
-            </div>
+        <section class="status-matriculas-grid" aria-label="Status das matrículas">
+            <article class="card-status card-status-pendente">
+                <div class="card-status-icone"><i class="bi bi-hourglass-split"></i></div>
+                <div>
+                    <span>NÃO CONFIRMADO</span>
+                    <strong id="statusNaoConfirmado">0</strong>
+                    <p>Matrículas aguardando confirmação</p>
+                </div>
+            </article>
+
+            <article class="card-status card-status-validado">
+                <div class="card-status-icone"><i class="bi bi-patch-check"></i></div>
+                <div>
+                    <span>VALIDADO</span>
+                    <strong id="statusValidado">0</strong>
+                    <p>Matrículas validadas no período</p>
+                </div>
+            </article>
+
+            <article class="card-status card-status-cancelado">
+                <div class="card-status-icone"><i class="bi bi-x-octagon"></i></div>
+                <div>
+                    <span>CANCELADO</span>
+                    <strong id="statusCancelado">0</strong>
+                    <p>Matrículas canceladas no período</p>
+                </div>
+            </article>
         </section>
 
         <section class="secao-filtros" aria-label="Filtros do dashboard">
@@ -201,7 +217,7 @@
             <article class="card-indicador card-destaque">
                 <div class="card-indicador-topo">
                     <div class="card-icone"><i class="bi bi-clipboard2-check"></i></div>
-                    <span class="card-etiqueta">SEMANA</span>
+                    <span class="card-etiqueta">PERÍODO</span>
                 </div>
                 <div class="card-indicador-conteudo">
                     <span>Total de matrículas</span>
