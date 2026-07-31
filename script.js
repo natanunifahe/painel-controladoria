@@ -144,8 +144,9 @@ function datasSaoIguais(a, b) { return a && b && obterChaveData(a) === obterChav
 function registroEstaNoPeriodo(registro, inicio, fim) { return Boolean(registro.data && registro.data >= inicio && registro.data <= fim); }
 
 function obterQuantidadeMatriculas(registro) {
-    const quantidade = Number(registro.quantidadeMatriculas);
-    return Number.isFinite(quantidade) && quantidade > 0 ? quantidade : 0;
+    // A coluna 8 identifica a matrícula. Cada célula preenchida representa
+    // uma matrícula, independentemente de o conteúdo ser número, RA ou texto.
+    return limparTexto(registro.matriculaReferencia) ? 1 : 0;
 }
 
 function somarMatriculas(dados) {
@@ -237,13 +238,26 @@ async function carregarDados() {
         vendedor: limparTexto(registro[CONFIG.campos.vendedor]),
         polo: limparTexto(registro[CONFIG.campos.polo]),
         curso: limparTexto(registro[CONFIG.campos.curso]),
-        quantidadeMatriculas: converterValorMonetario(obterCampoRegistro(registro, [CONFIG.campos.quantidadeMatriculas, "QUANTIDADE", "QTD MATRÍCULAS", "QTD MATRICULAS", "MATRÍCULAS", "MATRICULAS"])),
+        matriculaReferencia: limparTexto(obterCampoRegistro(registro, [
+            CONFIG.campos.quantidadeMatriculas,
+            "MATRÍCULA", "MATRICULA", "NÚMERO DA MATRÍCULA", "NUMERO DA MATRICULA",
+            "RA", "ALUNO", "NOME DO ALUNO"
+        ])),
         statusMatricula: limparTexto(obterCampoRegistro(registro, [CONFIG.campos.statusMatricula, "STATUS", "STATUS MATRÍCULA", "STATUS MATRICULA", "STATUS DA MATRÍCULA", "STATUS DA MATRICULA"])),
         quantidadeVendas: converterValorMonetario(registro[CONFIG.campos.quantidadeVendas]),
         boleto: converterValorMonetario(registro[CONFIG.campos.boleto]),
         cartaoAvista: converterValorMonetario(registro[CONFIG.campos.cartaoAvista]),
         taxaMatricula: converterValorMonetario(registro[CONFIG.campos.taxaMatricula])
-    })).filter(registro => registro.data && !registro.vendedor.toUpperCase().includes("VENDEDOR") && !registro.curso.toUpperCase().includes("CURSO"));
+    })).filter(registro => {
+        const pareceCabecalho =
+            registro.vendedor.toUpperCase().includes("VENDEDOR") ||
+            registro.vendedor.toUpperCase().includes("CONSULTOR") ||
+            registro.curso.toUpperCase().includes("CURSO") ||
+            registro.matriculaReferencia.toUpperCase().includes("MATRÍCULA") ||
+            registro.matriculaReferencia.toUpperCase().includes("MATRICULA");
+
+        return registro.data && registro.matriculaReferencia && !pareceCabecalho;
+    });
 
     configurarFiltrosIniciais();
     aplicarFiltros();
