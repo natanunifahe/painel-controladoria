@@ -28,6 +28,7 @@ let graficoCursos = null;
 const elementos = {
     totalMatriculas: document.getElementById("totalMatriculas"),
     matriculasHoje: document.getElementById("matriculasHoje"),
+    dataAuditoriaDescricao: document.getElementById("dataAuditoriaDescricao"),
     vendedoresAtivos: document.getElementById("totalVendedores"),
     mediaDiaria: document.getElementById("mediaDiaria"),
     melhorVendedor: document.getElementById("melhorVendedor"),
@@ -63,6 +64,16 @@ const elementos = {
 
 function limparTexto(valor) {
     return valor === null || valor === undefined ? "" : String(valor).trim();
+}
+
+function obterCampoRegistro(registro, chaves) {
+    for (const chave of chaves) {
+        if (Object.prototype.hasOwnProperty.call(registro, chave)) {
+            const valor = registro[chave];
+            if (valor !== null && valor !== undefined && String(valor).trim() !== "") return valor;
+        }
+    }
+    return "";
 }
 
 function criarDataLocal(ano, mes, dia) {
@@ -225,8 +236,8 @@ async function carregarDados() {
         vendedor: limparTexto(registro[CONFIG.campos.vendedor]),
         polo: limparTexto(registro[CONFIG.campos.polo]),
         curso: limparTexto(registro[CONFIG.campos.curso]),
-        quantidadeMatriculas: converterValorMonetario(registro[CONFIG.campos.quantidadeMatriculas]),
-        statusMatricula: limparTexto(registro[CONFIG.campos.statusMatricula]),
+        quantidadeMatriculas: converterValorMonetario(obterCampoRegistro(registro, [CONFIG.campos.quantidadeMatriculas, "QUANTIDADE", "QTD MATRÍCULAS", "QTD MATRICULAS", "MATRÍCULAS", "MATRICULAS"])),
+        statusMatricula: limparTexto(obterCampoRegistro(registro, [CONFIG.campos.statusMatricula, "STATUS", "STATUS MATRÍCULA", "STATUS MATRICULA", "STATUS DA MATRÍCULA", "STATUS DA MATRICULA"])),
         quantidadeVendas: converterValorMonetario(registro[CONFIG.campos.quantidadeVendas]),
         boleto: converterValorMonetario(registro[CONFIG.campos.boleto]),
         cartaoAvista: converterValorMonetario(registro[CONFIG.campos.cartaoAvista]),
@@ -243,7 +254,22 @@ function animarNumero(elemento, valorFinal, casas = 0) {
     elemento.textContent = Number(valorFinal || 0).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
 }
 
-function contarMatriculasHoje(dados) { const hoje = new Date(); return somarMatriculas(dados.filter(r => datasSaoIguais(r.data, hoje))); }
+function obterDataAuditoria() {
+    const data = new Date();
+    data.setDate(data.getDate() - 1);
+    data.setHours(0, 0, 0, 0);
+    return data;
+}
+function contarMatriculasDiaAnterior() {
+    const dataAuditoria = obterDataAuditoria();
+    const polo = elementos.filtroPolo?.value || "";
+    const consultor = elementos.filtroConsultor?.value || "";
+    return somarMatriculas(dadosOriginais.filter(r =>
+        datasSaoIguais(r.data, dataAuditoria) &&
+        (!polo || r.polo === polo) &&
+        (!consultor || r.vendedor === consultor)
+    ));
+}
 function calcularMediaDiaria(dados) {
     const diasComRegistro = new Set(dados.map(r => obterChaveData(r.data)).filter(Boolean)).size;
     return diasComRegistro ? somarMatriculas(dados) / diasComRegistro : 0;
@@ -251,7 +277,8 @@ function calcularMediaDiaria(dados) {
 
 function atualizarIndicadores(dados) {
     animarNumero(elementos.totalMatriculas, somarMatriculas(dados));
-    animarNumero(elementos.matriculasHoje, contarMatriculasHoje(dados));
+    animarNumero(elementos.matriculasHoje, contarMatriculasDiaAnterior());
+    if (elementos.dataAuditoriaDescricao) elementos.dataAuditoriaDescricao.textContent = `Referência da auditoria: ${formatarDataBrasileira(obterDataAuditoria())}`;
     animarNumero(elementos.vendedoresAtivos, contarValoresUnicos(dados, "vendedor"));
     animarNumero(elementos.mediaDiaria, calcularMediaDiaria(dados), 1);
 }

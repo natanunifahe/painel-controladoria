@@ -1649,7 +1649,7 @@ canvas {
 ========================================================= */
 .status-matriculas-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
     margin-bottom: 18px;
 }
@@ -1697,6 +1697,9 @@ canvas {
     font-size: 11px;
 }
 
+.card-status-total { border-color: rgba(31, 130, 255, .65); }
+.card-status-total .card-status-icone,
+.card-status-total span { color: #63b5ff; }
 .card-status-pendente { border-color: rgba(255, 166, 0, .55); }
 .card-status-pendente .card-status-icone,
 .card-status-pendente span { color: #ffb347; }
@@ -1707,6 +1710,9 @@ canvas {
 .card-status-cancelado .card-status-icone,
 .card-status-cancelado span { color: var(--vermelho); }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+    .status-matriculas-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
     .status-matriculas-grid { grid-template-columns: 1fr; }
 }

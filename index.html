@@ -43,7 +43,16 @@
     </header>
 
     <main class="painel">
-        <section class="status-matriculas-grid" aria-label="Status das matrículas">
+        <section class="status-matriculas-grid" aria-label="Resumo e status das matrículas">
+            <article class="card-status card-status-total">
+                <div class="card-status-icone"><i class="bi bi-clipboard2-check"></i></div>
+                <div>
+                    <span>TOTAL DE MATRÍCULAS</span>
+                    <strong id="totalMatriculas">0</strong>
+                    <p>Quantidade da coluna 8 no período selecionado</p>
+                </div>
+            </article>
+
             <article class="card-status card-status-pendente">
                 <div class="card-status-icone"><i class="bi bi-hourglass-split"></i></div>
                 <div>
@@ -214,27 +223,15 @@
         </section>
 
         <section class="indicadores-grid">
-            <article class="card-indicador card-destaque">
-                <div class="card-indicador-topo">
-                    <div class="card-icone"><i class="bi bi-clipboard2-check"></i></div>
-                    <span class="card-etiqueta">PERÍODO</span>
-                </div>
-                <div class="card-indicador-conteudo">
-                    <span>Total de matrículas</span>
-                    <strong id="totalMatriculas">0</strong>
-                    <p>Registros do período selecionado</p>
-                </div>
-            </article>
-
             <article class="card-indicador">
                 <div class="card-indicador-topo">
                     <div class="card-icone"><i class="bi bi-calendar2-check"></i></div>
-                    <span class="card-etiqueta">HOJE</span>
+                    <span class="card-etiqueta">D-1</span>
                 </div>
                 <div class="card-indicador-conteudo">
-                    <span>Matrículas do dia</span>
+                    <span>Matrículas do dia anterior</span>
                     <strong id="matriculasHoje">0</strong>
-                    <p>Matrículas realizadas hoje</p>
+                    <p id="dataAuditoriaDescricao">Referência da auditoria: dia anterior</p>
                 </div>
             </article>
 
